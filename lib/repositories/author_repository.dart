@@ -11,4 +11,5 @@ abstract interface class AuthorRepository {
   Future<void> hardDelete(int id);
   Future<void> restore(int id);
   Future<int> deleteMany(List<int> ids);
+  List<Author> listAll({bool includeDeleted = false});
 }

@@ -81,6 +81,12 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
     final result = notifier.result;
     return LibraryScaffold(
       title: 'Авторы',
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('add-author'),
+        onPressed: () => context.push('/authors/new'),
+        icon: const Icon(Icons.add),
+        label: const Text('Добавить'),
+      ),
       body: CatalogListView<Author>(
         title: 'Авторы',
         filters: [

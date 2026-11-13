@@ -1,18 +1,37 @@
 import '../data/seed.dart';
 import '../models/book.dart';
 import '../models/book_query.dart';
+import '../models/normalizers.dart';
 import '../models/page_result.dart';
 import 'book_repository.dart';
 import 'paging.dart';
 
 class InMemoryBookRepository implements BookRepository {
-  InMemoryBookRepository({this.latency = const Duration(milliseconds: 250)})
-    : _books = <Book>[...seedBooks],
-      _nextId = seedBooks.length + 1;
+  InMemoryBookRepository({
+    this.latency = const Duration(milliseconds: 250),
+    List<Book>? books,
+    this.persist,
+  }) : _books = <Book>[...(books ?? seedBooks)],
+       _nextId = _nextAfter(books ?? seedBooks);
 
   final Duration latency;
   final List<Book> _books;
+  final Future<void> Function(List<Book> books)? persist;
   int _nextId;
+
+  static int _nextAfter(List<Book> books) {
+    var maxId = 0;
+    for (final book in books) {
+      if (book.id > maxId) {
+        maxId = book.id;
+      }
+    }
+    return maxId + 1;
+  }
+
+  Future<void> _save() async {
+    await persist?.call(List<Book>.unmodifiable(_books));
+  }
 
   @override
   Future<PageResult<Book>> find(BookQuery query) async {
@@ -95,6 +114,7 @@ class InMemoryBookRepository implements BookRepository {
       deletedAt: book.deletedAt,
     );
     _books.add(created);
+    await _save();
     return created;
   }
 
@@ -106,6 +126,7 @@ class InMemoryBookRepository implements BookRepository {
       throw StateError('Книга ${book.id} не найдена');
     }
     _books[index] = book;
+    await _save();
     return book;
   }
 
@@ -117,12 +138,14 @@ class InMemoryBookRepository implements BookRepository {
       throw StateError('Книга $id не найдена');
     }
     _books[index] = _books[index].copyWith(deletedAt: DateTime.now());
+    await _save();
   }
 
   @override
   Future<void> hardDelete(int id) async {
     await Future<void>.delayed(latency);
     _books.removeWhere((book) => book.id == id);
+    await _save();
   }
 
   @override
@@ -133,6 +156,7 @@ class InMemoryBookRepository implements BookRepository {
       throw StateError('Книга $id не найдена');
     }
     _books[index] = _books[index].copyWith(clearDeletedAt: true);
+    await _save();
   }
 
   @override
@@ -151,6 +175,31 @@ class InMemoryBookRepository implements BookRepository {
         count++;
       }
     }
+    await _save();
     return count;
+  }
+
+  @override
+  List<Book> listAll({bool includeDeleted = false}) {
+    final rows = includeDeleted
+        ? _books
+        : _books.where((book) => !book.isDeleted);
+    return List<Book>.unmodifiable(rows);
+  }
+
+  @override
+  bool isbnTaken(String isbn, {int? exceptId}) {
+    final needle = normalizeIsbn(isbn);
+    if (needle.isEmpty) {
+      return false;
+    }
+    return _books.any(
+      (book) => book.id != exceptId && normalizeIsbn(book.isbn) == needle,
+    );
+  }
+
+  @override
+  int countByPublisher(int publisherId) {
+    return _books.where((book) => book.publisherId == publisherId).length;
   }
 }

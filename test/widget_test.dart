@@ -147,4 +147,66 @@ void main() {
     expect(find.text('Толстой'), findsNothing);
     expect(find.text('Кристи'), findsNothing);
   });
+
+  testWidgets('пустая форма книги показывает ошибки у полей', (tester) async {
+    await tester.pumpWidget(const LibraryApp());
+    appRouter.go('/books/new');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    final submit = find.widgetWithText(FilledButton, 'Создать');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+
+    expect(find.text('Укажите название'), findsOneWidget);
+    expect(find.text('Укажите ISBN'), findsOneWidget);
+    expect(find.text('Выберите издательство'), findsOneWidget);
+    expect(find.text('Выберите хотя бы одного автора'), findsOneWidget);
+    expect(find.text('Выберите хотя бы один жанр'), findsOneWidget);
+  });
+
+  testWidgets('повтор ISBN пишет ошибку под полем', (tester) async {
+    await tester.pumpWidget(const LibraryApp());
+    appRouter.go('/books/new');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('book-title')), 'Новая книга');
+    await tester.enterText(
+      find.byKey(const Key('book-isbn')),
+      '978-5-17-100001-1',
+    );
+    await tester.enterText(find.byKey(const Key('book-year')), '2000');
+    await tester.enterText(find.byKey(const Key('book-pages')), '320');
+    await tester.enterText(find.byKey(const Key('book-copies-total')), '4');
+    await tester.enterText(find.byKey(const Key('book-copies-available')), '2');
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('publisher-null-null')),
+    );
+    await tester.tap(find.byKey(const ValueKey('publisher-null-null')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('АСТ, Москва').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.widgetWithText(FilterChip, 'Толстой Лев Николаевич'),
+    );
+    await tester.tap(find.widgetWithText(FilterChip, 'Толстой Лев Николаевич'));
+    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Роман'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Роман'));
+    await tester.pump();
+
+    final submit = find.widgetWithText(FilledButton, 'Создать');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+
+    expect(find.text('Такой ISBN уже есть'), findsOneWidget);
+  });
 }

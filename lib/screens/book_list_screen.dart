@@ -2,11 +2,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
-import '../data/seed.dart';
 import '../models/book.dart';
 import '../models/book_query.dart';
+import '../repositories/in_memory_genre_repository.dart';
+import '../repositories/in_memory_publisher_repository.dart';
 import '../state/book_list_notifier.dart';
 import '../widgets/catalog_list_view.dart';
+import '../widgets/catalog_names.dart';
 import '../widgets/confirm.dart';
 import '../widgets/debounced_text_field.dart';
 import '../widgets/entity_table.dart';
@@ -84,6 +86,12 @@ class _BookListScreenState extends State<BookListScreen> {
     final result = notifier.result;
     return LibraryScaffold(
       title: 'Книги',
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('add-book'),
+        onPressed: () => context.push('/books/new'),
+        icon: const Icon(Icons.add),
+        label: const Text('Добавить'),
+      ),
       body: CatalogListView<Book>(
         title: 'Книги',
         filters: [
@@ -106,7 +114,13 @@ class _BookListScreenState extends State<BookListScreen> {
             fieldKey: const Key('books-genre'),
             value: query.genreId,
             emptyLabel: 'Все жанры',
-            options: [for (final genre in genres) (genre.id, genre.name)],
+            options: [
+              for (final genre in context.read<GenreRepository>().listAll(
+                includeDeleted: true,
+              ))
+                if (!genre.isDeleted || genre.id == query.genreId)
+                  (genre.id, genre.name),
+            ],
             onChanged: (value) => _go(query.copyWith(genreId: value)),
           ),
           _idDropdown(
@@ -115,8 +129,12 @@ class _BookListScreenState extends State<BookListScreen> {
             value: query.publisherId,
             emptyLabel: 'Все издательства',
             options: [
-              for (final publisher in publishers)
-                (publisher.id, publisher.name),
+              for (final publisher
+                  in context.read<PublisherRepository>().listAll(
+                    includeDeleted: true,
+                  ))
+                if (!publisher.isDeleted || publisher.id == query.publisherId)
+                  (publisher.id, publisher.name),
             ],
             onChanged: (value) => _go(query.copyWith(publisherId: value)),
           ),
@@ -214,7 +232,7 @@ class _BookListScreenState extends State<BookListScreen> {
       ),
       TableColumnSpec(
         label: 'Авторы',
-        build: (book) => Text(authorNames(book.authorIds)),
+        build: (book) => Text(joinedAuthors(context, book.authorIds)),
       ),
       TableColumnSpec(
         label: 'Год',
@@ -231,11 +249,11 @@ class _BookListScreenState extends State<BookListScreen> {
       TableColumnSpec(label: 'ISBN', build: (book) => Text(book.isbn)),
       TableColumnSpec(
         label: 'Издательство',
-        build: (book) => Text(publisherName(book.publisherId)),
+        build: (book) => Text(publisherLabel(context, book.publisherId)),
       ),
       TableColumnSpec(
         label: 'Жанры',
-        build: (book) => Text(genreNames(book.genreIds)),
+        build: (book) => Text(joinedGenres(context, book.genreIds)),
       ),
       TableColumnSpec(
         label: 'Экземпляры',
@@ -262,8 +280,8 @@ class _BookListScreenState extends State<BookListScreen> {
   }
 
   String _subtitle(Book book) {
-    return '${authorNames(book.authorIds)}\n'
-        '${book.year} · ${publisherName(book.publisherId)} · ${book.isbn}';
+    return '${joinedAuthors(context, book.authorIds)}\n'
+        '${book.year} · ${publisherLabel(context, book.publisherId)} · ${book.isbn}';
   }
 
   void _applyYear(String raw, {required bool from}) {

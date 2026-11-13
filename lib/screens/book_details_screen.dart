@@ -7,8 +7,10 @@ import '../repositories/book_repository.dart';
 import '../state/book_details_notifier.dart';
 import '../state/book_list_notifier.dart';
 import '../state/load_status.dart';
+import '../widgets/catalog_names.dart';
 import '../widgets/confirm.dart';
 import '../widgets/library_scaffold.dart';
+import '../widgets/reload_when_shown.dart';
 
 class BookDetailsScreen extends StatelessWidget {
   const BookDetailsScreen({required this.id, super.key});
@@ -33,85 +35,97 @@ class _BookDetailsBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final notifier = context.watch<BookDetailsNotifier>();
     final book = notifier.book;
-    return LibraryScaffold(
-      title: book?.title ?? 'Карточка книги',
-      body: switch (notifier.status) {
-        LoadStatus.idle ||
-        LoadStatus.loading => const Center(child: CircularProgressIndicator()),
-        LoadStatus.error => _Message(
-          icon: Icons.error_outline,
-          title: notifier.error ?? 'Ошибка',
-          onBack: () => _back(context),
-        ),
-        LoadStatus.success when book == null => _Message(
-          icon: Icons.error_outline,
-          title: 'Книга не найдена',
-          onBack: () => _back(context),
-        ),
-        LoadStatus.success => ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _back(context),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('К списку'),
-              ),
-            ),
-            Text(book!.title, style: Theme.of(context).textTheme.headlineSmall),
-            if (book.isDeleted) ...[
-              const SizedBox(height: 8),
-              Text('Удалена ${formatTimestamp(book.deletedAt!)}'),
-            ],
-            const SizedBox(height: 16),
-            _line('ISBN', book.isbn),
-            _line('Год', '${book.year}'),
-            _line('Страниц', '${book.pages}'),
-            _line('Издательство', publisherName(book.publisherId)),
-            _line('Жанры', genreNames(book.genreIds)),
-            _line(
-              'Экземпляры',
-              '${book.copiesAvailable} свободно из ${book.copiesTotal}',
-            ),
-            const SizedBox(height: 8),
-            const Text('Авторы'),
-            Wrap(
-              children: [
-                for (final authorId in book.authorIds)
-                  TextButton(
-                    onPressed: () => context.push('/authors/$authorId'),
-                    child: Text(authorName(authorId)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                if (!book.isDeleted)
-                  OutlinedButton.icon(
-                    onPressed: () => _softDelete(context),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Скрыть'),
-                  ),
-                if (book.isDeleted)
-                  FilledButton.icon(
-                    onPressed: () => _restore(context),
-                    icon: const Icon(Icons.restore),
-                    label: const Text('Восстановить'),
-                  ),
-                FilledButton.tonalIcon(
-                  onPressed: () => _hardDelete(context),
-                  icon: const Icon(Icons.delete_forever),
-                  label: const Text('Удалить навсегда'),
+    return ReloadWhenShown(
+      onShow: () => context.read<BookDetailsNotifier>().load(),
+      child: LibraryScaffold(
+        title: book?.title ?? 'Карточка книги',
+        body: switch (notifier.status) {
+          LoadStatus.idle || LoadStatus.loading => const Center(
+            child: CircularProgressIndicator(),
+          ),
+          LoadStatus.error => _Message(
+            icon: Icons.error_outline,
+            title: notifier.error ?? 'Ошибка',
+            onBack: () => _back(context),
+          ),
+          LoadStatus.success when book == null => _Message(
+            icon: Icons.error_outline,
+            title: 'Книга не найдена',
+            onBack: () => _back(context),
+          ),
+          LoadStatus.success => ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _back(context),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('К списку'),
                 ),
+              ),
+              Text(
+                book!.title,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              if (book.isDeleted) ...[
+                const SizedBox(height: 8),
+                Text('Удалена ${formatTimestamp(book.deletedAt!)}'),
               ],
-            ),
-          ],
-        ),
-      },
+              const SizedBox(height: 16),
+              _line('ISBN', book.isbn),
+              _line('Год', '${book.year}'),
+              _line('Страниц', '${book.pages}'),
+              _line('Издательство', publisherLabel(context, book.publisherId)),
+              _line('Жанры', joinedGenres(context, book.genreIds)),
+              _line(
+                'Экземпляры',
+                '${book.copiesAvailable} свободно из ${book.copiesTotal}',
+              ),
+              const SizedBox(height: 8),
+              const Text('Авторы'),
+              Wrap(
+                children: [
+                  for (final authorId in book.authorIds)
+                    TextButton(
+                      onPressed: () => context.push('/authors/$authorId'),
+                      child: Text(authorLabel(context, authorId)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => context.push('/books/${book.id}/edit'),
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Изменить'),
+                  ),
+                  if (!book.isDeleted)
+                    OutlinedButton.icon(
+                      onPressed: () => _softDelete(context),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Скрыть'),
+                    ),
+                  if (book.isDeleted)
+                    FilledButton.icon(
+                      onPressed: () => _restore(context),
+                      icon: const Icon(Icons.restore),
+                      label: const Text('Восстановить'),
+                    ),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _hardDelete(context),
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Удалить навсегда'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        },
+      ),
     );
   }
 

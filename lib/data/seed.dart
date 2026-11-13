@@ -1,5 +1,6 @@
 import '../models/author.dart';
 import '../models/book.dart';
+import '../models/reader.dart';
 import '../models/reference.dart';
 
 const genres = <Genre>[
@@ -11,15 +12,14 @@ const genres = <Genre>[
 ];
 
 const publishers = <Publisher>[
-  Publisher(id: 1, name: 'АСТ'),
-  Publisher(id: 2, name: 'Эксмо'),
-  Publisher(id: 3, name: 'Азбука'),
-  Publisher(id: 4, name: 'Питер'),
-  Publisher(id: 5, name: 'МИФ'),
+  Publisher(id: 1, name: 'АСТ', city: 'Москва'),
+  Publisher(id: 2, name: 'Эксмо', city: 'Москва'),
+  Publisher(id: 3, name: 'Азбука', city: 'Санкт-Петербург'),
+  Publisher(id: 4, name: 'Питер', city: 'Санкт-Петербург'),
+  Publisher(id: 5, name: 'МИФ', city: 'Москва'),
 ];
 
-/// Начальный набор. После перезагрузки страницы репозиторий снова
-/// копирует эти списки: правки в памяти не переживают обновление.
+/// Начальный набор. При первом запуске он копируется в localStorage.
 final List<Author> seedAuthors = <Author>[
   const Author(
     id: 1,
@@ -426,6 +426,110 @@ final List<Book> seedBooks = <Book>[
     genreIds: [2],
     copiesTotal: 6,
     copiesAvailable: 1,
+  ),
+];
+
+final List<Reader> seedReaders = <Reader>[
+  Reader(
+    id: 1,
+    lastName: 'Иванова',
+    firstName: 'Анна',
+    middleName: 'Сергеевна',
+    email: 'anna.ivanova@example.com',
+    phone: '+7 900 111-11-11',
+    card: LibraryCard(
+      number: 'ЧБ-100001',
+      issuedAt: DateTime.utc(2023, 1, 15),
+      expiresAt: DateTime.utc(2026, 1, 15),
+    ),
+  ),
+  Reader(
+    id: 2,
+    lastName: 'Петров',
+    firstName: 'Илья',
+    middleName: 'Олегович',
+    email: 'ilya.petrov@example.com',
+    phone: '+7 900 222-22-22',
+    card: LibraryCard(
+      number: 'ЧБ-100002',
+      issuedAt: DateTime.utc(2022, 6, 1),
+      expiresAt: DateTime.utc(2025, 6, 1),
+    ),
+  ),
+  Reader(
+    id: 3,
+    lastName: 'Сидорова',
+    firstName: 'Мария',
+    email: 'maria.sidorova@example.com',
+    phone: '+7 900 333-33-33',
+    card: LibraryCard(
+      number: 'ЧБ-100003',
+      issuedAt: DateTime.utc(2024, 2, 20),
+      expiresAt: DateTime.utc(2027, 2, 20),
+    ),
+  ),
+  Reader(
+    id: 4,
+    lastName: 'Кузнецов',
+    firstName: 'Олег',
+    middleName: 'Игоревич',
+    email: 'oleg.kuznetsov@example.com',
+    phone: '+7 900 444-44-44',
+    card: LibraryCard(
+      number: 'ЧБ-100004',
+      issuedAt: DateTime.utc(2021, 9, 9),
+      expiresAt: DateTime.utc(2024, 9, 9),
+    ),
+  ),
+  Reader(
+    id: 5,
+    lastName: 'Смирнова',
+    firstName: 'Елена',
+    email: 'elena.smirnova@example.com',
+    phone: '+7 900 555-55-55',
+    card: LibraryCard(
+      number: 'ЧБ-100005',
+      issuedAt: DateTime.utc(2023, 11, 3),
+      expiresAt: DateTime.utc(2026, 11, 3),
+    ),
+  ),
+  Reader(
+    id: 6,
+    lastName: 'Васильев',
+    firstName: 'Павел',
+    middleName: 'Андреевич',
+    email: 'pavel.vasiliev@example.com',
+    phone: '+7 900 666-66-66',
+    card: LibraryCard(
+      number: 'ЧБ-100006',
+      issuedAt: DateTime.utc(2020, 4, 12),
+      expiresAt: DateTime.utc(2023, 4, 12),
+    ),
+  ),
+  Reader(
+    id: 7,
+    lastName: 'Орлова',
+    firstName: 'Дарья',
+    email: 'darya.orlova@example.com',
+    phone: '+7 900 777-77-77',
+    deletedAt: DateTime.utc(2024, 12, 1),
+    card: LibraryCard(
+      number: 'ЧБ-100007',
+      issuedAt: DateTime.utc(2019, 8, 8),
+      expiresAt: DateTime.utc(2022, 8, 8),
+    ),
+  ),
+  Reader(
+    id: 8,
+    lastName: 'Новиков',
+    firstName: 'Артём',
+    email: 'artem.novikov@example.com',
+    phone: '+7 900 888-88-88',
+    card: LibraryCard(
+      number: 'ЧБ-100008',
+      issuedAt: DateTime.utc(2024, 5, 5),
+      expiresAt: DateTime.utc(2027, 5, 5),
+    ),
   ),
 ];
 

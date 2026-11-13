@@ -1,3 +1,5 @@
+import 'json_values.dart';
+
 /// Автор. Поиск в задании идёт по фамилии и стране.
 class Author {
   const Author({
@@ -46,6 +48,28 @@ class Author {
       country: country ?? this.country,
       birthYear: birthYear ?? this.birthYear,
       deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'lastName': lastName,
+    'firstName': firstName,
+    'middleName': middleName,
+    'country': country,
+    'birthYear': birthYear,
+    'deletedAt': deletedAt?.toIso8601String(),
+  };
+
+  factory Author.fromJson(Map<String, dynamic> json) {
+    return Author(
+      id: jsonInt(json['id']),
+      lastName: jsonString(json['lastName']),
+      firstName: jsonString(json['firstName']),
+      middleName: jsonString(json['middleName']),
+      country: jsonString(json['country']),
+      birthYear: jsonInt(json['birthYear']),
+      deletedAt: jsonDate(json['deletedAt']),
     );
   }
 }

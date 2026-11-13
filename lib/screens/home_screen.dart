@@ -22,9 +22,9 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Книги и авторы лежат в памяти. Поиск, фильтры, сортировка '
-                'и номер страницы записаны в адресе: ссылку можно открыть '
-                'в новой вкладке, а кнопка «Назад» вернёт предыдущий отбор.',
+                'Книги, авторы, жанры, издательства и читатели хранятся в '
+                'браузере и остаются после обновления страницы. Поиск, '
+                'фильтры, сортировка и номер страницы записаны в адресе.',
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
@@ -37,6 +37,24 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () => context.go('/authors'),
                 icon: const Icon(Icons.people),
                 label: const Text('Авторы'),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => context.go('/genres'),
+                icon: const Icon(Icons.category),
+                label: const Text('Жанры'),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => context.go('/publishers'),
+                icon: const Icon(Icons.apartment),
+                label: const Text('Издательства'),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => context.go('/readers'),
+                icon: const Icon(Icons.badge),
+                label: const Text('Читатели'),
               ),
             ],
           ),

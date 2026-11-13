@@ -6,13 +6,31 @@ import 'author_repository.dart';
 import 'paging.dart';
 
 class InMemoryAuthorRepository implements AuthorRepository {
-  InMemoryAuthorRepository({this.latency = const Duration(milliseconds: 250)})
-    : _authors = <Author>[...seedAuthors],
-      _nextId = seedAuthors.length + 1;
+  InMemoryAuthorRepository({
+    this.latency = const Duration(milliseconds: 250),
+    List<Author>? authors,
+    this.persist,
+  }) : _authors = <Author>[...(authors ?? seedAuthors)],
+       _nextId = _nextAfter(authors ?? seedAuthors);
 
   final Duration latency;
   final List<Author> _authors;
+  final Future<void> Function(List<Author> authors)? persist;
   int _nextId;
+
+  static int _nextAfter(List<Author> authors) {
+    var maxId = 0;
+    for (final author in authors) {
+      if (author.id > maxId) {
+        maxId = author.id;
+      }
+    }
+    return maxId + 1;
+  }
+
+  Future<void> _save() async {
+    await persist?.call(List<Author>.unmodifiable(_authors));
+  }
 
   @override
   Future<PageResult<Author>> find(AuthorQuery query) async {
@@ -76,6 +94,7 @@ class InMemoryAuthorRepository implements AuthorRepository {
       deletedAt: author.deletedAt,
     );
     _authors.add(created);
+    await _save();
     return created;
   }
 
@@ -87,6 +106,7 @@ class InMemoryAuthorRepository implements AuthorRepository {
       throw StateError('Автор ${author.id} не найден');
     }
     _authors[index] = author;
+    await _save();
     return author;
   }
 
@@ -98,12 +118,14 @@ class InMemoryAuthorRepository implements AuthorRepository {
       throw StateError('Автор $id не найден');
     }
     _authors[index] = _authors[index].copyWith(deletedAt: DateTime.now());
+    await _save();
   }
 
   @override
   Future<void> hardDelete(int id) async {
     await Future<void>.delayed(latency);
     _authors.removeWhere((author) => author.id == id);
+    await _save();
   }
 
   @override
@@ -114,6 +136,7 @@ class InMemoryAuthorRepository implements AuthorRepository {
       throw StateError('Автор $id не найден');
     }
     _authors[index] = _authors[index].copyWith(clearDeletedAt: true);
+    await _save();
   }
 
   @override
@@ -129,6 +152,15 @@ class InMemoryAuthorRepository implements AuthorRepository {
         count++;
       }
     }
+    await _save();
     return count;
+  }
+
+  @override
+  List<Author> listAll({bool includeDeleted = false}) {
+    final rows = includeDeleted
+        ? _authors
+        : _authors.where((author) => !author.isDeleted);
+    return List<Author>.unmodifiable(rows);
   }
 }

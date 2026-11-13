@@ -1,27 +1,38 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
+
+import '../storage/storage_notice.dart';
 
 class LibraryScaffold extends StatelessWidget {
-  const LibraryScaffold({required this.title, required this.body, super.key});
+  const LibraryScaffold({
+    required this.title,
+    required this.body,
+    this.confirmLeave,
+    this.floatingActionButton,
+    super.key,
+  });
 
   final String title;
   final Widget body;
+  final Future<bool> Function()? confirmLeave;
+  final Widget? floatingActionButton;
+
+  static const _sections = <(String, String)>[
+    ('/', 'Главная'),
+    ('/books', 'Книги'),
+    ('/authors', 'Авторы'),
+    ('/genres', 'Жанры'),
+    ('/publishers', 'Издательства'),
+    ('/readers', 'Читатели'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final path = GoRouter.of(context).state.uri.path;
-    final section = path.startsWith('/books')
-        ? '/books'
-        : path.startsWith('/authors')
-        ? '/authors'
-        : '/';
-    final wide = MediaQuery.sizeOf(context).width >= 720;
-
-    final links = <Widget>[
-      _sectionButton(context, section, '/', 'Главная'),
-      _sectionButton(context, section, '/books', 'Книги'),
-      _sectionButton(context, section, '/authors', 'Авторы'),
-    ];
+    final section = _sectionOf(path);
+    final wide = MediaQuery.sizeOf(context).width >= 1280;
+    final notice = context.watch<StorageNotice>().message;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +47,8 @@ class LibraryScaffold extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ...links,
+                  for (final item in _sections)
+                    _sectionButton(context, section, item.$1, item.$2),
                 ],
               )
             : Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -45,21 +57,55 @@ class LibraryScaffold extends StatelessWidget {
             : [
                 PopupMenuButton<String>(
                   tooltip: 'Разделы',
-                  onSelected: (value) {
-                    if (value != section) {
-                      context.go(value);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: '/', child: Text('Главная')),
-                    PopupMenuItem(value: '/books', child: Text('Книги')),
-                    PopupMenuItem(value: '/authors', child: Text('Авторы')),
+                  onSelected: (value) => _open(context, section, value),
+                  itemBuilder: (context) => [
+                    for (final item in _sections)
+                      PopupMenuItem(value: item.$1, child: Text(item.$2)),
                   ],
                 ),
               ],
       ),
-      body: body,
+      floatingActionButton: floatingActionButton,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (notice != null)
+            MaterialBanner(
+              content: Text(notice),
+              actions: [
+                TextButton(
+                  onPressed: () => context.read<StorageNotice>().dismiss(),
+                  child: const Text('Скрыть'),
+                ),
+              ],
+            ),
+          Expanded(child: body),
+        ],
+      ),
     );
+  }
+
+  String _sectionOf(String path) {
+    for (final item in _sections) {
+      if (item.$1 != '/' && path.startsWith(item.$1)) {
+        return item.$1;
+      }
+    }
+    return '/';
+  }
+
+  Future<void> _open(BuildContext context, String section, String path) async {
+    if (path == section) {
+      return;
+    }
+    final confirm = confirmLeave;
+    if (confirm != null) {
+      final leave = await confirm();
+      if (!leave || !context.mounted) {
+        return;
+      }
+    }
+    context.go(path);
   }
 
   Widget _sectionButton(
@@ -70,7 +116,7 @@ class LibraryScaffold extends StatelessWidget {
   ) {
     final selected = section == path;
     return TextButton(
-      onPressed: selected ? null : () => context.go(path),
+      onPressed: selected ? null : () => _open(context, section, path),
       child: Text(label),
     );
   }
