@@ -2,7 +2,7 @@
 class AuthorQuery {
   const AuthorQuery({
     this.search = '',
-    this.sortField = 'lastName',
+    this.sortField = 'fullName',
     this.sortAscending = true,
     this.page = 1,
     this.size = 10,
@@ -16,7 +16,7 @@ class AuthorQuery {
   final int size;
   final bool includeDeleted;
 
-  static const allowedSortFields = {'lastName', 'country', 'birthYear'};
+  static const allowedSortFields = {'fullName', 'country', 'birthYear'};
   static const allowedSizes = {10, 25, 50};
 
   AuthorQuery copyWith({
@@ -43,7 +43,7 @@ class AuthorQuery {
     final page = int.tryParse(params['page'] ?? '');
     return AuthorQuery(
       search: params['search'] ?? '',
-      sortField: allowedSortFields.contains(sort.$1) ? sort.$1 : 'lastName',
+      sortField: allowedSortFields.contains(sort.$1) ? sort.$1 : 'fullName',
       sortAscending: sort.$2,
       page: page != null && page > 0 ? page : 1,
       size: size != null && allowedSizes.contains(size) ? size : 10,
@@ -56,7 +56,7 @@ class AuthorQuery {
     if (search.isNotEmpty) {
       params['search'] = search;
     }
-    if (sortField != 'lastName' || !sortAscending) {
+    if (sortField != 'fullName' || !sortAscending) {
       params['sort'] = '$sortField,${sortAscending ? 'asc' : 'desc'}';
     }
     if (page != 1) {
@@ -97,13 +97,13 @@ class AuthorQuery {
 
 (String, bool) _readSort(String? raw) {
   if (raw == null || !raw.contains(',')) {
-    return ('lastName', true);
+    return ('fullName', true);
   }
   final parts = raw.split(',');
   final field = parts.first.trim();
   final ascending = parts.length < 2 || parts[1].trim() != 'desc';
   if (field.isEmpty) {
-    return ('lastName', true);
+    return ('fullName', true);
   }
   return (field, ascending);
 }

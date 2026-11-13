@@ -45,7 +45,7 @@ class InMemoryAuthorRepository implements AuthorRepository {
       rows = rows
           .where(
             (author) =>
-                author.lastName.toLowerCase().contains(needle) ||
+                author.fullName.toLowerCase().contains(needle) ||
                 author.country.toLowerCase().contains(needle),
           )
           .toList();
@@ -55,11 +55,8 @@ class InMemoryAuthorRepository implements AuthorRepository {
       var result = switch (query.sortField) {
         'country' => a.country.toLowerCase().compareTo(b.country.toLowerCase()),
         'birthYear' => a.birthYear.compareTo(b.birthYear),
-        _ => a.lastName.toLowerCase().compareTo(b.lastName.toLowerCase()),
+        _ => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()),
       };
-      if (result == 0) {
-        result = a.firstName.toLowerCase().compareTo(b.firstName.toLowerCase());
-      }
       final directed = query.sortAscending ? result : -result;
       if (directed != 0) {
         return directed;
@@ -86,9 +83,7 @@ class InMemoryAuthorRepository implements AuthorRepository {
     await Future<void>.delayed(latency);
     final created = Author(
       id: _nextId++,
-      lastName: author.lastName,
-      firstName: author.firstName,
-      middleName: author.middleName,
+      fullName: author.fullName,
       country: author.country,
       birthYear: author.birthYear,
       deletedAt: author.deletedAt,

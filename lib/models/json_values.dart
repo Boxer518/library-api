@@ -34,12 +34,36 @@ List<int> jsonIntList(Object? value) {
   }
   final ids = <int>[];
   for (final item in value) {
-    final id = jsonInt(item);
+    final id = item is Map ? jsonInt(item['id']) : jsonInt(item);
     if (id > 0) {
       ids.add(id);
     }
   }
   return ids;
+}
+
+/// Идентификатор связи: плоское поле или вложенный объект `{id: ...}`.
+int jsonRelationId(Map<String, dynamic> json, String idKey, String objectKey) {
+  if (json[idKey] != null) {
+    return jsonInt(json[idKey]);
+  }
+  final nested = json[objectKey];
+  if (nested is Map) {
+    return jsonInt(nested['id']);
+  }
+  return 0;
+}
+
+/// Список связей: `authorIds` либо развёрнутые `authors`.
+List<int> jsonRelationIds(
+  Map<String, dynamic> json,
+  String idsKey,
+  String objectsKey,
+) {
+  if (json[idsKey] is List) {
+    return jsonIntList(json[idsKey]);
+  }
+  return jsonIntList(json[objectsKey]);
 }
 
 String formatDate(DateTime value) {

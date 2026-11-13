@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_debug.dart';
 import '../models/book.dart';
 import '../models/book_query.dart';
 import '../repositories/in_memory_genre_repository.dart';
@@ -31,11 +32,26 @@ class BookListScreen extends StatefulWidget {
 
 class _BookListScreenState extends State<BookListScreen> {
   var _syncScheduled = false;
+  String? _probe;
 
   @override
   void initState() {
     super.initState();
     _scheduleSync();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final probe = readNetworkProbe(context);
+    if (probe == null || probe == _probe) {
+      return;
+    }
+    final first = _probe == null;
+    _probe = probe;
+    if (!first) {
+      _scheduleSync();
+    }
   }
 
   @override
@@ -64,6 +80,7 @@ class _BookListScreenState extends State<BookListScreen> {
     if (!mounted) {
       return;
     }
+    readNetworkProbe(context);
     final notifier = context.read<BookListNotifier>();
     if (widget.simulateFailure) {
       notifier.demonstrateError();

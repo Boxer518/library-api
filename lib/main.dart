@@ -2,8 +2,11 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/api_client.dart';
+import 'core/api_debug.dart';
+import 'core/api_session.dart';
+import 'repositories/api_repositories.dart';
 import 'repositories/author_repository.dart';
 import 'repositories/book_repository.dart';
 import 'repositories/in_memory_author_repository.dart';
@@ -11,32 +14,36 @@ import 'repositories/in_memory_book_repository.dart';
 import 'repositories/in_memory_genre_repository.dart';
 import 'repositories/in_memory_publisher_repository.dart';
 import 'repositories/in_memory_reader_repository.dart';
-import 'repositories/persistent_book_repository.dart';
+import 'repositories/loan_repository.dart';
 import 'router.dart';
 import 'state/author_list_notifier.dart';
 import 'state/book_list_notifier.dart';
 import 'state/catalog_notifiers.dart';
-import 'storage/persisted_list.dart';
 import 'storage/storage_notice.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
   GoRouter.optionURLReflectsImperativeAPIs = true;
-  final prefs = await SharedPreferences.getInstance();
-  final notice = StorageNotice();
-  await prepareStorage(prefs, notice);
+  final debug = ApiDebugParams();
+  final session = ApiSession();
+  final dio = buildDio(
+    tokenProvider: () => session.accessToken,
+    debug: debug,
+    session: session,
+  );
+  await session.login(dio);
+  final cache = ReferenceCache();
+  await cache.warmUp(dio);
   runApp(
     LibraryApp(
-      notice: notice,
-      bookRepository: await PersistentBookRepository.open(prefs, notice),
-      authorRepository: await PersistentAuthorRepository.open(prefs, notice),
-      genreRepository: await PersistentGenreRepository.open(prefs, notice),
-      publisherRepository: await PersistentPublisherRepository.open(
-        prefs,
-        notice,
-      ),
-      readerRepository: await PersistentReaderRepository.open(prefs, notice),
+      bookRepository: ApiBookRepository(dio),
+      authorRepository: ApiAuthorRepository(dio, cache),
+      genreRepository: ApiGenreRepository(dio, cache),
+      publisherRepository: ApiPublisherRepository(dio, cache),
+      readerRepository: ApiReaderRepository(dio, cache),
+      loanRepository: ApiLoanRepository(dio),
+      debugParams: debug,
     ),
   );
 }
@@ -50,6 +57,8 @@ class LibraryApp extends StatefulWidget {
     this.genreRepository,
     this.publisherRepository,
     this.readerRepository,
+    this.loanRepository,
+    this.debugParams,
   });
 
   final StorageNotice? notice;
@@ -58,6 +67,8 @@ class LibraryApp extends StatefulWidget {
   final GenreRepository? genreRepository;
   final PublisherRepository? publisherRepository;
   final ReaderRepository? readerRepository;
+  final LoanRepository? loanRepository;
+  final ApiDebugParams? debugParams;
 
   @override
   State<LibraryApp> createState() => _LibraryAppState();
@@ -65,6 +76,7 @@ class LibraryApp extends StatefulWidget {
 
 class _LibraryAppState extends State<LibraryApp> {
   late final StorageNotice _notice = widget.notice ?? StorageNotice();
+  late final ApiDebugParams _debug = widget.debugParams ?? ApiDebugParams();
   late final BookRepository _books =
       widget.bookRepository ?? InMemoryBookRepository();
   late final AuthorRepository _authors =
@@ -75,11 +87,31 @@ class _LibraryAppState extends State<LibraryApp> {
       widget.publisherRepository ?? InMemoryPublisherRepository();
   late final ReaderRepository _readers =
       widget.readerRepository ?? InMemoryReaderRepository();
+  late final LoanRepository _loans =
+      widget.loanRepository ?? _NoLoanRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    appRouter.routerDelegate.addListener(_syncDebug);
+    _syncDebug();
+  }
+
+  @override
+  void dispose() {
+    appRouter.routerDelegate.removeListener(_syncDebug);
+    super.dispose();
+  }
+
+  void _syncDebug() {
+    _debug.apply(appRouter.routeInformationProvider.value.uri.queryParameters);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider<ApiDebugParams>.value(value: _debug),
         ChangeNotifierProvider<StorageNotice>.value(value: _notice),
         Provider<BookRepository>.value(value: _books),
         ChangeNotifierProvider(create: (_) => BookListNotifier(_books)),
@@ -93,6 +125,7 @@ class _LibraryAppState extends State<LibraryApp> {
         ),
         Provider<ReaderRepository>.value(value: _readers),
         ChangeNotifierProvider(create: (_) => ReaderListNotifier(_readers)),
+        Provider<LoanRepository>.value(value: _loans),
       ],
       child: MaterialApp.router(
         title: 'Библиотека',
@@ -104,4 +137,13 @@ class _LibraryAppState extends State<LibraryApp> {
       ),
     );
   }
+}
+
+class _NoLoanRepository implements LoanRepository {
+  @override
+  Future<void> issue({
+    required int bookId,
+    required int readerId,
+    int days = 14,
+  }) async {}
 }

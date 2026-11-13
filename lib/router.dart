@@ -92,8 +92,8 @@ final appRouter = GoRouter(
     ),
     _catalog(
       path: '/readers',
-      defaultSort: 'lastName',
-      sorts: {'lastName', 'email', 'card'},
+      defaultSort: 'fullName',
+      sorts: {'fullName', 'email'},
       list: (query, fail) =>
           ReaderListScreen(query: query, simulateFailure: fail),
       create: () => const ReaderFormScreen(),

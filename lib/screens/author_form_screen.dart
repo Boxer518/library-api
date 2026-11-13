@@ -19,9 +19,7 @@ class AuthorFormScreen extends StatefulWidget {
 }
 
 class _AuthorFormScreenState extends State<AuthorFormScreen> {
-  final _lastName = TextEditingController();
-  final _firstName = TextEditingController();
-  final _middleName = TextEditingController();
+  final _fullName = TextEditingController();
   final _country = TextEditingController();
   final _birthYear = TextEditingController();
 
@@ -29,18 +27,13 @@ class _AuthorFormScreenState extends State<AuthorFormScreen> {
   var _missing = false;
   var _dirty = false;
   var _hydrating = false;
+  final _serverErrors = <String, String>{};
   DateTime? _deletedAt;
 
   @override
   void initState() {
     super.initState();
-    for (final controller in [
-      _lastName,
-      _firstName,
-      _middleName,
-      _country,
-      _birthYear,
-    ]) {
+    for (final controller in [_fullName, _country, _birthYear]) {
       controller.addListener(_touch);
     }
     _load();
@@ -48,9 +41,7 @@ class _AuthorFormScreenState extends State<AuthorFormScreen> {
 
   @override
   void dispose() {
-    _lastName.dispose();
-    _firstName.dispose();
-    _middleName.dispose();
+    _fullName.dispose();
     _country.dispose();
     _birthYear.dispose();
     super.dispose();
@@ -77,9 +68,7 @@ class _AuthorFormScreenState extends State<AuthorFormScreen> {
     }
     _hydrating = true;
     if (author != null) {
-      _lastName.text = author.lastName;
-      _firstName.text = author.firstName;
-      _middleName.text = author.middleName;
+      _fullName.text = author.fullName;
       _country.text = author.country;
       _birthYear.text = '${author.birthYear}';
       _deletedAt = author.deletedAt;
@@ -94,9 +83,7 @@ class _AuthorFormScreenState extends State<AuthorFormScreen> {
   Future<bool> _save() async {
     final author = Author(
       id: widget.id ?? 0,
-      lastName: _lastName.text.trim(),
-      firstName: _firstName.text.trim(),
-      middleName: _middleName.text.trim(),
+      fullName: _fullName.text.trim(),
       country: _country.text.trim(),
       birthYear: int.parse(_birthYear.text.trim()),
       deletedAt: _deletedAt,
@@ -124,49 +111,47 @@ class _AuthorFormScreenState extends State<AuthorFormScreen> {
       missing: _missing ? 'Автор не найден' : null,
       dirty: _dirty,
       onSubmit: _save,
+      clearServerErrors: _serverErrors.clear,
+      onValidation: (errors) {
+        _serverErrors
+          ..clear()
+          ..addAll(errors);
+      },
       fields: [
         formField(
-          controller: _lastName,
-          label: 'Фамилия',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите фамилию',
-            max: 80,
-          ),
-        ),
-        formField(
-          controller: _firstName,
-          label: 'Имя',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите имя',
-            max: 80,
-          ),
-        ),
-        formField(
-          controller: _middleName,
-          label: 'Отчество',
-          validator: (value) => Validators.optionalText(value, max: 80),
+          controller: _fullName,
+          label: 'ФИО',
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['fullName']) ??
+              Validators.requiredText(
+                value,
+                emptyMessage: 'Укажите имя автора',
+                max: 160,
+              ),
         ),
         formField(
           controller: _country,
           label: 'Страна',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите страну',
-            max: 80,
-          ),
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['country']) ??
+              Validators.requiredText(
+                value,
+                emptyMessage: 'Укажите страну',
+                max: 80,
+              ),
         ),
         formField(
           controller: _birthYear,
           label: 'Год рождения',
           keyboardType: TextInputType.number,
-          validator: (value) => Validators.intInRange(
-            value,
-            label: 'год рождения',
-            min: 1,
-            max: year,
-          ),
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['birthYear']) ??
+              Validators.intInRange(
+                value,
+                label: 'год рождения',
+                min: 1,
+                max: year,
+              ),
         ),
       ],
     );

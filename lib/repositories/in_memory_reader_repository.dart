@@ -54,18 +54,18 @@ class InMemoryReaderRepository implements ReaderRepository {
     final needle = query.search.trim().toLowerCase();
     if (needle.isNotEmpty) {
       rows = rows.where((reader) {
-        return reader.lastName.toLowerCase().contains(needle) ||
+        return reader.fullName.toLowerCase().contains(needle) ||
             reader.email.toLowerCase().contains(needle) ||
-            reader.card.number.toLowerCase().contains(needle);
+            (reader.card?.number.toLowerCase().contains(needle) ?? false);
       }).toList();
     }
     rows.sort((a, b) {
       final result = switch (query.sortField) {
         'email' => a.email.toLowerCase().compareTo(b.email.toLowerCase()),
-        'card' => a.card.number.toLowerCase().compareTo(
-          b.card.number.toLowerCase(),
+        'card' => (a.card?.number ?? '').toLowerCase().compareTo(
+          (b.card?.number ?? '').toLowerCase(),
         ),
-        _ => a.lastName.toLowerCase().compareTo(b.lastName.toLowerCase()),
+        _ => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()),
       };
       final directed = query.sortAscending ? result : -result;
       if (directed != 0) {
@@ -92,9 +92,7 @@ class InMemoryReaderRepository implements ReaderRepository {
     await Future<void>.delayed(latency);
     final created = Reader(
       id: _nextId++,
-      lastName: reader.lastName,
-      firstName: reader.firstName,
-      middleName: reader.middleName,
+      fullName: reader.fullName,
       email: reader.email,
       phone: reader.phone,
       card: reader.card,

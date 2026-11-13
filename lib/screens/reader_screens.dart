@@ -36,27 +36,23 @@ class ReaderListScreen extends StatelessWidget {
       read: (context) => context.read<ReaderListNotifier>(),
       basePath: '/readers',
       searchLabel: 'Фамилия, почта или билет',
-      defaultSort: 'lastName',
+      defaultSort: 'fullName',
       tableKey: const Key('reader-table'),
       cardsKey: const Key('reader-cards'),
       idOf: (reader) => reader.id,
       isDeleted: (reader) => reader.isDeleted,
       columns: (context, open) => [
         TableColumnSpec(
-          label: 'Фамилия',
-          sortField: 'lastName',
+          label: 'ФИО',
+          sortField: 'fullName',
           build: (reader) => TextButton(
             onPressed: () => open(reader.id),
             child: Text(
               reader.isDeleted
-                  ? '${reader.lastName} (удалён)'
-                  : reader.lastName,
+                  ? '${reader.fullName} (удалён)'
+                  : reader.fullName,
             ),
           ),
-        ),
-        TableColumnSpec(
-          label: 'Имя',
-          build: (reader) => Text(reader.firstName),
         ),
         TableColumnSpec(
           label: 'Почта',
@@ -65,8 +61,7 @@ class ReaderListScreen extends StatelessWidget {
         ),
         TableColumnSpec(
           label: 'Билет',
-          sortField: 'card',
-          build: (reader) => Text(reader.card.number),
+          build: (reader) => Text(reader.card?.number ?? '—'),
         ),
       ],
       cardTitle: (context, reader, open) => TextButton(
@@ -75,7 +70,9 @@ class ReaderListScreen extends StatelessWidget {
           reader.isDeleted ? '${reader.fullName} (удалён)' : reader.fullName,
         ),
       ),
-      cardSubtitle: (reader) => Text('${reader.email}\n${reader.card.number}'),
+      cardSubtitle: (reader) => Text(
+        '${reader.email}\n${reader.card?.number ?? 'билет выдаст сервер'}',
+      ),
     );
   }
 }
@@ -165,17 +162,20 @@ class _ReaderDetailsScreenState extends State<ReaderDetailsScreen> {
         lines: reader == null
             ? const []
             : [
-                ('Фамилия', reader.lastName),
-                ('Имя', reader.firstName),
-                (
-                  'Отчество',
-                  reader.middleName.isEmpty ? '—' : reader.middleName,
-                ),
+                ('ФИО', reader.fullName),
                 ('Почта', reader.email),
                 ('Телефон', reader.phone),
-                ('Номер билета', reader.card.number),
-                ('Выдан', formatDate(reader.card.issuedAt)),
-                ('Действует до', formatDate(reader.card.expiresAt)),
+                ('Номер билета', reader.card?.number ?? '—'),
+                (
+                  'Выдан',
+                  reader.card == null ? '—' : formatDate(reader.card!.issuedAt),
+                ),
+                (
+                  'Действует до',
+                  reader.card == null
+                      ? '—'
+                      : formatDate(reader.card!.expiresAt),
+                ),
               ],
         deleted: reader?.isDeleted ?? false,
         onEdit: reader == null
@@ -221,33 +221,22 @@ class ReaderFormScreen extends StatefulWidget {
 }
 
 class _ReaderFormScreenState extends State<ReaderFormScreen> {
-  final _lastName = TextEditingController();
-  final _firstName = TextEditingController();
-  final _middleName = TextEditingController();
+  final _fullName = TextEditingController();
   final _email = TextEditingController();
   final _phone = TextEditingController();
-  final _cardNumber = TextEditingController();
-  final _issuedAt = TextEditingController();
-  final _expiresAt = TextEditingController();
+
   var _ready = false;
   var _missing = false;
   var _dirty = false;
   var _hydrating = false;
+  final _serverErrors = <String, String>{};
   DateTime? _deletedAt;
+  LibraryCard? _card;
 
   @override
   void initState() {
     super.initState();
-    for (final controller in [
-      _lastName,
-      _firstName,
-      _middleName,
-      _email,
-      _phone,
-      _cardNumber,
-      _issuedAt,
-      _expiresAt,
-    ]) {
+    for (final controller in [_fullName, _email, _phone]) {
       controller.addListener(() {
         if (_hydrating || _dirty) {
           return;
@@ -260,14 +249,9 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
 
   @override
   void dispose() {
-    _lastName.dispose();
-    _firstName.dispose();
-    _middleName.dispose();
+    _fullName.dispose();
     _email.dispose();
     _phone.dispose();
-    _cardNumber.dispose();
-    _issuedAt.dispose();
-    _expiresAt.dispose();
     super.dispose();
   }
 
@@ -285,14 +269,10 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
     }
     _hydrating = true;
     if (reader != null) {
-      _lastName.text = reader.lastName;
-      _firstName.text = reader.firstName;
-      _middleName.text = reader.middleName;
+      _fullName.text = reader.fullName;
       _email.text = reader.email;
       _phone.text = reader.phone;
-      _cardNumber.text = reader.card.number;
-      _issuedAt.text = formatDate(reader.card.issuedAt);
-      _expiresAt.text = formatDate(reader.card.expiresAt);
+      _card = reader.card;
       _deletedAt = reader.deletedAt;
     }
     setState(() {
@@ -303,6 +283,10 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
   }
 
   String? _emailError(String? value) {
+    final server = firstServerError(_serverErrors, const ['email']);
+    if (server != null) {
+      return server;
+    }
     final format = Validators.email(value);
     if (format != null) {
       return format;
@@ -317,32 +301,13 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
     return null;
   }
 
-  String? _expiresError(String? value) {
-    final format = Validators.date(value, label: 'Срок');
-    if (format != null) {
-      return format;
-    }
-    final issued = parseDate(_issuedAt.text);
-    final expires = parseDate(value);
-    if (issued != null && expires != null && expires.isBefore(issued)) {
-      return 'Срок раньше даты выдачи';
-    }
-    return null;
-  }
-
   Future<bool> _save() async {
     final reader = Reader(
       id: widget.id ?? 0,
-      lastName: _lastName.text.trim(),
-      firstName: _firstName.text.trim(),
-      middleName: _middleName.text.trim(),
+      fullName: _fullName.text.trim(),
       email: _email.text.trim(),
       phone: _phone.text.trim(),
-      card: LibraryCard(
-        number: _cardNumber.text.trim(),
-        issuedAt: parseDate(_issuedAt.text)!,
-        expiresAt: parseDate(_expiresAt.text)!,
-      ),
+      card: _card,
       deletedAt: _deletedAt,
     );
     final repository = context.read<ReaderRepository>();
@@ -367,59 +332,39 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
       missing: _missing ? 'Читатель не найден' : null,
       dirty: _dirty,
       onSubmit: _save,
+      clearServerErrors: _serverErrors.clear,
+      onValidation: (errors) {
+        _serverErrors
+          ..clear()
+          ..addAll(errors);
+      },
       fields: [
         formField(
-          controller: _lastName,
-          label: 'Фамилия',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите фамилию',
-            max: 80,
-          ),
-        ),
-        formField(
-          controller: _firstName,
-          label: 'Имя',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите имя',
-            max: 80,
-          ),
-        ),
-        formField(
-          controller: _middleName,
-          label: 'Отчество',
-          validator: (value) => Validators.optionalText(value, max: 80),
+          controller: _fullName,
+          label: 'ФИО',
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['fullName']) ??
+              Validators.requiredText(
+                value,
+                emptyMessage: 'Укажите ФИО читателя',
+                max: 160,
+              ),
         ),
         formField(controller: _email, label: 'Почта', validator: _emailError),
         formField(
           controller: _phone,
           label: 'Телефон',
-          validator: Validators.phone,
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['phone']) ??
+              Validators.phone(value),
         ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Text('Читательский билет'),
-        ),
-        formField(
-          controller: _cardNumber,
-          label: 'Номер билета',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите номер билета',
-            max: 40,
+        if (_card != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Билет ${_card!.number}, до ${formatDate(_card!.expiresAt)}',
+            ),
           ),
-        ),
-        formField(
-          controller: _issuedAt,
-          label: 'Дата выдачи',
-          validator: (value) => Validators.date(value, label: 'Дата выдачи'),
-        ),
-        formField(
-          controller: _expiresAt,
-          label: 'Действует до',
-          validator: _expiresError,
-        ),
       ],
     );
   }

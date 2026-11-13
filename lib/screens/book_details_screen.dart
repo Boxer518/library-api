@@ -2,8 +2,12 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_exceptions.dart';
 import '../data/seed.dart';
+import '../models/book.dart';
 import '../repositories/book_repository.dart';
+import '../repositories/in_memory_reader_repository.dart';
+import '../repositories/loan_repository.dart';
 import '../state/book_details_notifier.dart';
 import '../state/book_list_notifier.dart';
 import '../state/load_status.dart';
@@ -104,6 +108,12 @@ class _BookDetailsBody extends StatelessWidget {
                     label: const Text('Изменить'),
                   ),
                   if (!book.isDeleted)
+                    FilledButton.tonalIcon(
+                      onPressed: () => _issue(context, book),
+                      icon: const Icon(Icons.assignment_ind_outlined),
+                      label: const Text('Выдать'),
+                    ),
+                  if (!book.isDeleted)
                     OutlinedButton.icon(
                       onPressed: () => _softDelete(context),
                       icon: const Icon(Icons.delete_outline),
@@ -127,6 +137,68 @@ class _BookDetailsBody extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _issue(BuildContext context, Book book) async {
+    final readers = context
+        .read<ReaderRepository>()
+        .listAll()
+        .where((reader) => !reader.isDeleted)
+        .toList();
+    if (!context.mounted) {
+      return;
+    }
+    final readerId = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Выдать книгу'),
+          content: SizedBox(
+            width: 420,
+            height: readers.isEmpty ? null : 320,
+            child: readers.isEmpty
+                ? const Text('Нет читателей.')
+                : ListView(
+                    children: [
+                      for (final reader in readers)
+                        ListTile(
+                          title: Text(reader.fullName),
+                          subtitle: Text(reader.email),
+                          onTap: () => Navigator.of(context).pop(reader.id),
+                        ),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Отмена'),
+            ),
+          ],
+        );
+      },
+    );
+    if (readerId == null || !context.mounted) {
+      return;
+    }
+    try {
+      await context.read<LoanRepository>().issue(
+        bookId: book.id,
+        readerId: readerId,
+      );
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Книга выдана')));
+      await context.read<BookDetailsNotifier>().load();
+    } on ApiException catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   void _back(BuildContext context) {

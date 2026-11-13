@@ -13,8 +13,7 @@ String joinedAuthors(BuildContext context, List<int> ids) {
     includeDeleted: true,
   );
   final names = <int, String>{
-    for (final author in authors)
-      author.id: '${author.lastName} ${author.firstName}',
+    for (final author in authors) author.id: author.fullName,
   };
   return ids.map((id) => names[id] ?? 'Автор #$id').join(', ');
 }

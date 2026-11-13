@@ -167,7 +167,7 @@ void main() {
     final repository = InMemoryAuthorRepository(latency: instant);
     final family = await repository.find(const AuthorQuery(search: 'стругац'));
     expect(family.total, 2);
-    expect(family.items.first.firstName, 'Аркадий');
+    expect(family.items.first.fullName, contains('Аркадий'));
 
     final country = await repository.find(
       const AuthorQuery(search: 'сша', sortField: 'birthYear'),
@@ -179,11 +179,14 @@ void main() {
     );
 
     final hidden = await repository.find(const AuthorQuery(size: 50));
-    expect(hidden.items.any((author) => author.lastName == 'Кристи'), isFalse);
+    expect(
+      hidden.items.any((author) => author.fullName.contains('Кристи')),
+      isFalse,
+    );
     final visible = await repository.find(
       const AuthorQuery(size: 50, includeDeleted: true, search: 'кристи'),
     );
-    expect(visible.items.single.lastName, 'Кристи');
+    expect(visible.items.single.fullName, contains('Кристи'));
 
     final sorted = await repository.find(
       const AuthorQuery(

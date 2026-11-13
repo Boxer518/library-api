@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_debug.dart';
 import '../models/author.dart';
 import '../models/author_query.dart';
 import '../state/author_list_notifier.dart';
@@ -28,11 +29,26 @@ class AuthorListScreen extends StatefulWidget {
 
 class _AuthorListScreenState extends State<AuthorListScreen> {
   var _syncScheduled = false;
+  String? _probe;
 
   @override
   void initState() {
     super.initState();
     _scheduleSync();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final probe = readNetworkProbe(context);
+    if (probe == null || probe == _probe) {
+      return;
+    }
+    final first = _probe == null;
+    _probe = probe;
+    if (!first) {
+      _scheduleSync();
+    }
   }
 
   @override
@@ -59,6 +75,7 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
     if (!mounted) {
       return;
     }
+    readNetworkProbe(context);
     final notifier = context.read<AuthorListNotifier>();
     if (widget.simulateFailure) {
       notifier.demonstrateError();
@@ -162,11 +179,8 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
           onRestore: () => _restore(author),
         ),
         cardTitle: (author) => _titleButton(context, author),
-        cardSubtitle: (author) => Text(
-          '${author.firstName}'
-          '${author.middleName.isEmpty ? '' : ' ${author.middleName}'}\n'
-          '${author.country} · ${author.birthYear}',
-        ),
+        cardSubtitle: (author) =>
+            Text('${author.country} · ${author.birthYear}'),
         tableKey: const Key('author-table'),
         cardsKey: const Key('author-cards'),
       ),
@@ -176,15 +190,9 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
   List<TableColumnSpec<Author>> _columns(BuildContext context) {
     return [
       TableColumnSpec(
-        label: 'Фамилия',
-        sortField: 'lastName',
+        label: 'ФИО',
+        sortField: 'fullName',
         build: (author) => _titleButton(context, author),
-      ),
-      TableColumnSpec(label: 'Имя', build: (author) => Text(author.firstName)),
-      TableColumnSpec(
-        label: 'Отчество',
-        build: (author) =>
-            Text(author.middleName.isEmpty ? '—' : author.middleName),
       ),
       TableColumnSpec(
         label: 'Страна',
@@ -202,8 +210,8 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
 
   Widget _titleButton(BuildContext context, Author author) {
     final label = author.isDeleted
-        ? '${author.lastName} (удалён)'
-        : author.lastName;
+        ? '${author.fullName} (удалён)'
+        : author.fullName;
     return Align(
       alignment: Alignment.centerLeft,
       child: TextButton(

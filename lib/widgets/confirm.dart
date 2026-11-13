@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/api_exceptions.dart';
+
 Future<String?> runConfirmed(
   BuildContext context, {
   required String title,
@@ -29,11 +31,20 @@ Future<String?> runConfirmed(
   if (accepted != true || !context.mounted) {
     return null;
   }
-  final notice = await action();
-  if (notice != null && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(notice)));
+  try {
+    final notice = await action();
+    if (notice != null && context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(notice)));
+    }
+    return notice;
+  } on ApiException catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    }
+    return null;
   }
-  return notice;
 }
 
 Future<bool> askToLeave(BuildContext context) async {

@@ -8,6 +8,7 @@ class IdChipField extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.emptyMessage,
+    this.serverError,
     super.key,
   });
 
@@ -16,13 +17,19 @@ class IdChipField extends StatelessWidget {
   final List<int> value;
   final ValueChanged<List<int>> onChanged;
   final String emptyMessage;
+  final String? Function()? serverError;
 
   @override
   Widget build(BuildContext context) {
     return FormField<List<int>>(
       initialValue: value,
-      validator: (selected) =>
-          (selected == null || selected.isEmpty) ? emptyMessage : null,
+      validator: (selected) {
+        final server = serverError?.call();
+        if (server != null && server.isNotEmpty) {
+          return server;
+        }
+        return (selected == null || selected.isEmpty) ? emptyMessage : null;
+      },
       builder: (field) {
         final selected = field.value ?? const <int>[];
         return InputDecorator(

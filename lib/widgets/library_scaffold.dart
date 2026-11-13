@@ -29,7 +29,7 @@ class LibraryScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final path = GoRouter.of(context).state.uri.path;
+    final path = GoRouter.of(context).routeInformationProvider.value.uri.path;
     final section = _sectionOf(path);
     final wide = MediaQuery.sizeOf(context).width >= 1280;
     final notice = context.watch<StorageNotice>().message;

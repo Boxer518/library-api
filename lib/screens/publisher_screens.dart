@@ -166,7 +166,16 @@ class _PublisherDetailsScreenState extends State<PublisherDetailsScreen> {
         backPath: '/publishers',
         lines: publisher == null
             ? const []
-            : [('Название', publisher.name), ('Город', publisher.city)],
+            : [
+                ('Название', publisher.name),
+                ('Город', publisher.city),
+                (
+                  'Год основания',
+                  publisher.foundedYear == null
+                      ? '—'
+                      : '${publisher.foundedYear}',
+                ),
+              ],
         deleted: publisher?.isDeleted ?? false,
         onEdit: publisher == null
             ? null
@@ -232,16 +241,18 @@ class PublisherFormScreen extends StatefulWidget {
 class _PublisherFormScreenState extends State<PublisherFormScreen> {
   final _name = TextEditingController();
   final _city = TextEditingController();
+  final _foundedYear = TextEditingController();
   var _ready = false;
   var _missing = false;
   var _dirty = false;
   var _hydrating = false;
+  final _serverErrors = <String, String>{};
   DateTime? _deletedAt;
 
   @override
   void initState() {
     super.initState();
-    for (final controller in [_name, _city]) {
+    for (final controller in [_name, _city, _foundedYear]) {
       controller.addListener(() {
         if (_hydrating || _dirty) {
           return;
@@ -256,6 +267,7 @@ class _PublisherFormScreenState extends State<PublisherFormScreen> {
   void dispose() {
     _name.dispose();
     _city.dispose();
+    _foundedYear.dispose();
     super.dispose();
   }
 
@@ -277,6 +289,9 @@ class _PublisherFormScreenState extends State<PublisherFormScreen> {
     if (publisher != null) {
       _name.text = publisher.name;
       _city.text = publisher.city;
+      _foundedYear.text = publisher.foundedYear == null
+          ? ''
+          : '${publisher.foundedYear}';
       _deletedAt = publisher.deletedAt;
     }
     setState(() {
@@ -291,6 +306,7 @@ class _PublisherFormScreenState extends State<PublisherFormScreen> {
       id: widget.id ?? 0,
       name: _name.text.trim(),
       city: _city.text.trim(),
+      foundedYear: int.tryParse(_foundedYear.text.trim()),
       deletedAt: _deletedAt,
     );
     final repository = context.read<PublisherRepository>();
@@ -315,24 +331,57 @@ class _PublisherFormScreenState extends State<PublisherFormScreen> {
       missing: _missing ? 'Издательство не найдено' : null,
       dirty: _dirty,
       onSubmit: _save,
+      clearServerErrors: _serverErrors.clear,
+      onValidation: (errors) {
+        _serverErrors
+          ..clear()
+          ..addAll(errors);
+      },
       fields: [
         formField(
           controller: _name,
           label: 'Название',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите название',
-            max: 120,
-          ),
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['name']) ??
+              Validators.requiredText(
+                value,
+                emptyMessage: 'Укажите название',
+                max: 120,
+              ),
         ),
         formField(
           controller: _city,
           label: 'Город',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите город',
-            max: 80,
-          ),
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['city']) ??
+              Validators.requiredText(
+                value,
+                emptyMessage: 'Укажите город',
+                max: 80,
+              ),
+        ),
+        formField(
+          controller: _foundedYear,
+          label: 'Год основания',
+          keyboardType: TextInputType.number,
+          validator: (value) {
+            final server = firstServerError(_serverErrors, const [
+              'foundedYear',
+            ]);
+            if (server != null) {
+              return server;
+            }
+            final text = value?.trim() ?? '';
+            if (text.isEmpty) {
+              return null;
+            }
+            final year = int.tryParse(text);
+            final now = DateTime.now().year;
+            if (year == null || year < 1400 || year > now) {
+              return 'Год основания от 1400 до $now';
+            }
+            return null;
+          },
         ),
       ],
     );

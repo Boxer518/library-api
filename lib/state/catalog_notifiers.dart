@@ -34,7 +34,7 @@ class PublisherListNotifier
 class ReaderListNotifier extends EntityListNotifier<Reader, CatalogQuery> {
   ReaderListNotifier(ReaderRepository repository)
     : super(
-        initialQuery: const CatalogQuery(sortField: 'lastName'),
+        initialQuery: const CatalogQuery(sortField: 'fullName'),
         find: repository.find,
         deleteManyItems: repository.deleteMany,
         softDeleteItem: repository.softDelete,

@@ -143,7 +143,7 @@ void main() {
     await tester.pumpWidget(const LibraryApp());
     appRouter.go('/authors?search=сша');
     await tester.pumpAndSettle();
-    expect(find.text('Брэдбери'), findsOneWidget);
+    expect(find.textContaining('Брэдбери'), findsOneWidget);
     expect(find.text('Толстой'), findsNothing);
     expect(find.text('Кристи'), findsNothing);
   });
@@ -184,7 +184,6 @@ void main() {
     await tester.enterText(find.byKey(const Key('book-year')), '2000');
     await tester.enterText(find.byKey(const Key('book-pages')), '320');
     await tester.enterText(find.byKey(const Key('book-copies-total')), '4');
-    await tester.enterText(find.byKey(const Key('book-copies-available')), '2');
 
     await tester.ensureVisible(
       find.byKey(const ValueKey('publisher-null-null')),

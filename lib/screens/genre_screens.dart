@@ -119,7 +119,15 @@ class _GenreDetailsScreenState extends State<GenreDetailsScreen> {
         error: _error,
         missing: genre == null,
         backPath: '/genres',
-        lines: genre == null ? const [] : [('Название', genre.name)],
+        lines: genre == null
+            ? const []
+            : [
+                ('Название', genre.name),
+                (
+                  'Описание',
+                  genre.description.isEmpty ? '—' : genre.description,
+                ),
+              ],
         deleted: genre?.isDeleted ?? false,
         onEdit: genre == null
             ? null
@@ -189,27 +197,32 @@ class GenreFormScreen extends StatefulWidget {
 
 class _GenreFormScreenState extends State<GenreFormScreen> {
   final _name = TextEditingController();
+  final _description = TextEditingController();
   var _ready = false;
   var _missing = false;
   var _dirty = false;
   var _hydrating = false;
+  final _serverErrors = <String, String>{};
   DateTime? _deletedAt;
 
   @override
   void initState() {
     super.initState();
-    _name.addListener(() {
-      if (_hydrating || _dirty) {
-        return;
-      }
-      setState(() => _dirty = true);
-    });
+    for (final controller in [_name, _description]) {
+      controller.addListener(() {
+        if (_hydrating || _dirty) {
+          return;
+        }
+        setState(() => _dirty = true);
+      });
+    }
     _load();
   }
 
   @override
   void dispose() {
     _name.dispose();
+    _description.dispose();
     super.dispose();
   }
 
@@ -228,6 +241,7 @@ class _GenreFormScreenState extends State<GenreFormScreen> {
     _hydrating = true;
     if (genre != null) {
       _name.text = genre.name;
+      _description.text = genre.description;
       _deletedAt = genre.deletedAt;
     }
     setState(() {
@@ -241,6 +255,7 @@ class _GenreFormScreenState extends State<GenreFormScreen> {
     final genre = Genre(
       id: widget.id ?? 0,
       name: _name.text.trim(),
+      description: _description.text.trim(),
       deletedAt: _deletedAt,
     );
     final repository = context.read<GenreRepository>();
@@ -265,15 +280,30 @@ class _GenreFormScreenState extends State<GenreFormScreen> {
       missing: _missing ? 'Жанр не найден' : null,
       dirty: _dirty,
       onSubmit: _save,
+      clearServerErrors: _serverErrors.clear,
+      onValidation: (errors) {
+        _serverErrors
+          ..clear()
+          ..addAll(errors);
+      },
       fields: [
         formField(
           controller: _name,
           label: 'Название',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите название',
-            max: 80,
-          ),
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['name']) ??
+              Validators.requiredText(
+                value,
+                emptyMessage: 'Укажите название',
+                max: 80,
+              ),
+        ),
+        formField(
+          controller: _description,
+          label: 'Описание',
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['description']) ??
+              Validators.optionalText(value, max: 300),
         ),
       ],
     );

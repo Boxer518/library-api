@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/api_debug.dart';
 import '../models/catalog_query.dart';
 import '../state/entity_list_notifier.dart';
 import 'catalog_list_view.dart';
@@ -61,11 +62,26 @@ class CatalogBrowser<T> extends StatefulWidget {
 
 class _CatalogBrowserState<T> extends State<CatalogBrowser<T>> {
   var _syncScheduled = false;
+  String? _probe;
 
   @override
   void initState() {
     super.initState();
     _scheduleSync();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final probe = readNetworkProbe(context);
+    if (probe == null || probe == _probe) {
+      return;
+    }
+    final first = _probe == null;
+    _probe = probe;
+    if (!first) {
+      _scheduleSync();
+    }
   }
 
   @override
@@ -92,6 +108,7 @@ class _CatalogBrowserState<T> extends State<CatalogBrowser<T>> {
     if (!mounted) {
       return;
     }
+    readNetworkProbe(context);
     final notifier = widget.read(context);
     if (widget.simulateFailure) {
       notifier.demonstrateError();

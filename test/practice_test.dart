@@ -23,7 +23,7 @@ void main() {
 
     final reader = Reader.fromJson(const {});
     expect(reader.email, '');
-    expect(reader.card.number, '');
+    expect(reader.card, isNull);
 
     final publisher = Publisher.fromJson(const {'name': 'АСТ'});
     expect(publisher.city, '');

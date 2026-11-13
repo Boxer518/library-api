@@ -1,40 +1,25 @@
 import 'json_values.dart';
 
-/// Автор. Поиск в задании идёт по фамилии и стране.
+/// Автор. В учебном API одно поле `fullName`, а не фамилия и имя по отдельности.
 class Author {
   const Author({
     required this.id,
-    required this.lastName,
-    required this.firstName,
-    this.middleName = '',
+    required this.fullName,
     required this.country,
     required this.birthYear,
     this.deletedAt,
   });
 
   final int id;
-  final String lastName;
-  final String firstName;
-  final String middleName;
+  final String fullName;
   final String country;
   final int birthYear;
   final DateTime? deletedAt;
 
   bool get isDeleted => deletedAt != null;
 
-  String get fullName {
-    final parts = <String>[
-      lastName,
-      firstName,
-      if (middleName.isNotEmpty) middleName,
-    ];
-    return parts.join(' ');
-  }
-
   Author copyWith({
-    String? lastName,
-    String? firstName,
-    String? middleName,
+    String? fullName,
     String? country,
     int? birthYear,
     DateTime? deletedAt,
@@ -42,9 +27,7 @@ class Author {
   }) {
     return Author(
       id: id,
-      lastName: lastName ?? this.lastName,
-      firstName: firstName ?? this.firstName,
-      middleName: middleName ?? this.middleName,
+      fullName: fullName ?? this.fullName,
       country: country ?? this.country,
       birthYear: birthYear ?? this.birthYear,
       deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
@@ -53,9 +36,7 @@ class Author {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'lastName': lastName,
-    'firstName': firstName,
-    'middleName': middleName,
+    'fullName': fullName,
     'country': country,
     'birthYear': birthYear,
     'deletedAt': deletedAt?.toIso8601String(),
@@ -64,9 +45,7 @@ class Author {
   factory Author.fromJson(Map<String, dynamic> json) {
     return Author(
       id: jsonInt(json['id']),
-      lastName: jsonString(json['lastName']),
-      firstName: jsonString(json['firstName']),
-      middleName: jsonString(json['middleName']),
+      fullName: jsonString(json['fullName']),
       country: jsonString(json['country']),
       birthYear: jsonInt(json['birthYear']),
       deletedAt: jsonDate(json['deletedAt']),

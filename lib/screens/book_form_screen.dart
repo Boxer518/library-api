@@ -31,12 +31,12 @@ class _BookFormScreenState extends State<BookFormScreen> {
   final _year = TextEditingController();
   final _pages = TextEditingController();
   final _copiesTotal = TextEditingController();
-  final _copiesAvailable = TextEditingController();
 
   var _ready = false;
   var _missing = false;
   var _dirty = false;
   var _hydrating = false;
+  final _serverErrors = <String, String>{};
   int? _publisherId;
   String? _city;
   DateTime? _deletedAt;
@@ -44,19 +44,13 @@ class _BookFormScreenState extends State<BookFormScreen> {
   List<int> _genreIds = [];
   List<Author> _authors = const [];
   List<Genre> _genres = const [];
+  int? _loadedAvailable;
   List<Publisher> _publishers = const [];
 
   @override
   void initState() {
     super.initState();
-    for (final controller in [
-      _title,
-      _isbn,
-      _year,
-      _pages,
-      _copiesTotal,
-      _copiesAvailable,
-    ]) {
+    for (final controller in [_title, _isbn, _year, _pages, _copiesTotal]) {
       controller.addListener(_touch);
     }
     _load();
@@ -69,7 +63,6 @@ class _BookFormScreenState extends State<BookFormScreen> {
     _year.dispose();
     _pages.dispose();
     _copiesTotal.dispose();
-    _copiesAvailable.dispose();
     super.dispose();
   }
 
@@ -108,7 +101,7 @@ class _BookFormScreenState extends State<BookFormScreen> {
       _year.text = '${book.year}';
       _pages.text = '${book.pages}';
       _copiesTotal.text = '${book.copiesTotal}';
-      _copiesAvailable.text = '${book.copiesAvailable}';
+      _loadedAvailable = book.copiesAvailable;
       _publisherId = book.publisherId;
       _authorIds = List<int>.of(book.authorIds);
       _genreIds = List<int>.of(book.genreIds);
@@ -154,6 +147,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
   }
 
   Future<bool> _save() async {
+    final total = int.parse(_copiesTotal.text.trim());
+    final available = (_loadedAvailable ?? total).clamp(0, total);
     final book = Book(
       id: widget.id ?? 0,
       title: _title.text.trim(),
@@ -163,8 +158,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
       publisherId: _publisherId!,
       authorIds: List<int>.of(_authorIds),
       genreIds: List<int>.of(_genreIds),
-      copiesTotal: int.parse(_copiesTotal.text.trim()),
-      copiesAvailable: int.parse(_copiesAvailable.text.trim()),
+      copiesTotal: total,
+      copiesAvailable: available,
       deletedAt: _deletedAt,
     );
     final repository = context.read<BookRepository>();
@@ -181,6 +176,10 @@ class _BookFormScreenState extends State<BookFormScreen> {
   }
 
   String? _isbnError(String? value) {
+    final server = firstServerError(_serverErrors, const ['isbn']);
+    if (server != null) {
+      return server;
+    }
     final format = Validators.isbn(value);
     if (format != null) {
       return format;
@@ -193,16 +192,6 @@ class _BookFormScreenState extends State<BookFormScreen> {
       return 'Такой ISBN уже есть';
     }
     return null;
-  }
-
-  String? _availableError(String? value) {
-    final total = int.tryParse(_copiesTotal.text.trim());
-    return Validators.intInRange(
-      value,
-      label: 'свободные',
-      min: 0,
-      max: total ?? 10000,
-    );
   }
 
   @override
@@ -219,16 +208,24 @@ class _BookFormScreenState extends State<BookFormScreen> {
       missing: _missing ? 'Книга не найдена' : null,
       dirty: _dirty,
       onSubmit: _save,
+      clearServerErrors: _serverErrors.clear,
+      onValidation: (errors) {
+        _serverErrors
+          ..clear()
+          ..addAll(errors);
+      },
       fields: [
         formField(
           fieldKey: const Key('book-title'),
           controller: _title,
           label: 'Название',
-          validator: (value) => Validators.requiredText(
-            value,
-            emptyMessage: 'Укажите название',
-            max: 200,
-          ),
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['title']) ??
+              Validators.requiredText(
+                value,
+                emptyMessage: 'Укажите название',
+                max: 200,
+              ),
         ),
         formField(
           fieldKey: const Key('book-isbn'),
@@ -242,6 +239,7 @@ class _BookFormScreenState extends State<BookFormScreen> {
           label: 'Год издания',
           keyboardType: TextInputType.number,
           validator: (value) =>
+              firstServerError(_serverErrors, const ['year']) ??
               Validators.intInRange(value, label: 'год', min: 1450, max: 2100),
         ),
         formField(
@@ -249,12 +247,14 @@ class _BookFormScreenState extends State<BookFormScreen> {
           controller: _pages,
           label: 'Страниц',
           keyboardType: TextInputType.number,
-          validator: (value) => Validators.intInRange(
-            value,
-            label: 'страницы',
-            min: 1,
-            max: 20000,
-          ),
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['pages']) ??
+              Validators.intInRange(
+                value,
+                label: 'страницы',
+                min: 1,
+                max: 20000,
+              ),
         ),
         DropdownButtonFormField<String>(
           key: ValueKey('city-$_city'),
@@ -303,7 +303,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
           ],
           validator: (value) {
             _publisherId = value;
-            return Validators.requiredId(value, 'Выберите издательство');
+            return firstServerError(_serverErrors, const ['publisherId']) ??
+                Validators.requiredId(value, 'Выберите издательство');
           },
           onChanged: (id) {
             Publisher? selected;
@@ -343,6 +344,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
           ],
           value: _authorIds,
           emptyMessage: 'Выберите хотя бы одного автора',
+          serverError: () =>
+              firstServerError(_serverErrors, const ['authorIds']),
           onChanged: (ids) => setState(() {
             _authorIds = ids;
             _dirty = true;
@@ -358,6 +361,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
           ],
           value: _genreIds,
           emptyMessage: 'Выберите хотя бы один жанр',
+          serverError: () =>
+              firstServerError(_serverErrors, const ['genreIds']),
           onChanged: (ids) => setState(() {
             _genreIds = ids;
             _dirty = true;
@@ -369,19 +374,14 @@ class _BookFormScreenState extends State<BookFormScreen> {
           controller: _copiesTotal,
           label: 'Экземпляров всего',
           keyboardType: TextInputType.number,
-          validator: (value) => Validators.intInRange(
-            value,
-            label: 'экземпляры',
-            min: 1,
-            max: 10000,
-          ),
-        ),
-        formField(
-          fieldKey: const Key('book-copies-available'),
-          controller: _copiesAvailable,
-          label: 'Свободно',
-          keyboardType: TextInputType.number,
-          validator: _availableError,
+          validator: (value) =>
+              firstServerError(_serverErrors, const ['copiesTotal']) ??
+              Validators.intInRange(
+                value,
+                label: 'экземпляры',
+                min: 0,
+                max: 10000,
+              ),
         ),
       ],
     );

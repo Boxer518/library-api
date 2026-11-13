@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/api_exceptions.dart';
 import 'confirm.dart';
 import 'library_scaffold.dart';
 
@@ -14,6 +15,8 @@ class EntityForm extends StatefulWidget {
     required this.dirty,
     this.ready = true,
     this.missing,
+    this.clearServerErrors,
+    this.onValidation,
     super.key,
   });
 
@@ -24,6 +27,8 @@ class EntityForm extends StatefulWidget {
   final bool dirty;
   final bool ready;
   final String? missing;
+  final VoidCallback? clearServerErrors;
+  final void Function(Map<String, String> errors)? onValidation;
 
   @override
   State<EntityForm> createState() => _EntityFormState();
@@ -35,24 +40,39 @@ class _EntityFormState extends State<EntityForm> {
   var _allowPop = false;
 
   Future<void> _submit() async {
+    widget.clearServerErrors?.call();
     if (!_formKey.currentState!.validate()) {
       return;
     }
     setState(() => _saving = true);
-    final saved = await widget.onSubmit();
-    if (!mounted) {
-      return;
-    }
-    setState(() => _saving = false);
-    if (!saved) {
-      return;
-    }
-    setState(() => _allowPop = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.pop();
+    try {
+      final saved = await widget.onSubmit();
+      if (!mounted || !saved) {
+        return;
       }
-    });
+      setState(() => _allowPop = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.pop();
+        }
+      });
+    } on ValidationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      widget.onValidation?.call(error.errors);
+      _formKey.currentState!.validate();
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
   }
 
   Future<bool> _confirmLeave() => askToLeave(context);
@@ -135,6 +155,17 @@ class _EntityFormState extends State<EntityForm> {
       ),
     );
   }
+}
+
+/// Текст ошибки сервера по первому совпавшему ключу поля.
+String? firstServerError(Map<String, String> errors, List<String> keys) {
+  for (final key in keys) {
+    final message = errors[key];
+    if (message != null && message.isNotEmpty) {
+      return message;
+    }
+  }
+  return null;
 }
 
 Widget formField({

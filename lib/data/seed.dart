@@ -23,101 +23,80 @@ const publishers = <Publisher>[
 final List<Author> seedAuthors = <Author>[
   const Author(
     id: 1,
-    lastName: 'Толстой',
-    firstName: 'Лев',
-    middleName: 'Николаевич',
+    fullName: 'Толстой Лев Николаевич',
     country: 'Россия',
     birthYear: 1828,
   ),
   const Author(
     id: 2,
-    lastName: 'Достоевский',
-    firstName: 'Фёдор',
-    middleName: 'Михайлович',
+    fullName: 'Достоевский Фёдор Михайлович',
     country: 'Россия',
     birthYear: 1821,
   ),
   const Author(
     id: 3,
-    lastName: 'Пушкин',
-    firstName: 'Александр',
-    middleName: 'Сергеевич',
+    fullName: 'Пушкин Александр Сергеевич',
     country: 'Россия',
     birthYear: 1799,
   ),
   const Author(
     id: 4,
-    lastName: 'Оруэлл',
-    firstName: 'Джордж',
+    fullName: 'Оруэлл Джордж',
     country: 'Великобритания',
     birthYear: 1903,
   ),
   const Author(
     id: 5,
-    lastName: 'Брэдбери',
-    firstName: 'Рэй',
-    middleName: 'Дуглас',
+    fullName: 'Брэдбери Рэй Дуглас',
     country: 'США',
     birthYear: 1920,
   ),
   Author(
     id: 6,
-    lastName: 'Кристи',
-    firstName: 'Агата',
+    fullName: 'Кристи Агата',
     country: 'Великобритания',
     birthYear: 1890,
     deletedAt: DateTime.utc(2024, 3, 12),
   ),
   const Author(
     id: 7,
-    lastName: 'Стругацкий',
-    firstName: 'Аркадий',
-    middleName: 'Натанович',
+    fullName: 'Стругацкий Аркадий Натанович',
     country: 'Россия',
     birthYear: 1925,
   ),
   const Author(
     id: 8,
-    lastName: 'Стругацкий',
-    firstName: 'Борис',
-    middleName: 'Натанович',
+    fullName: 'Стругацкий Борис Натанович',
     country: 'Россия',
     birthYear: 1933,
   ),
   const Author(
     id: 9,
-    lastName: 'Кинг',
-    firstName: 'Стивен',
-    middleName: 'Эдвин',
+    fullName: 'Кинг Стивен Эдвин',
     country: 'США',
     birthYear: 1947,
   ),
   const Author(
     id: 10,
-    lastName: 'Азимов',
-    firstName: 'Айзек',
+    fullName: 'Азимов Айзек',
     country: 'США',
     birthYear: 1920,
   ),
   const Author(
     id: 11,
-    lastName: 'Булгаков',
-    firstName: 'Михаил',
-    middleName: 'Афанасьевич',
+    fullName: 'Булгаков Михаил Афанасьевич',
     country: 'Россия',
     birthYear: 1891,
   ),
   const Author(
     id: 12,
-    lastName: 'Уэллс',
-    firstName: 'Герберт',
+    fullName: 'Уэллс Герберт',
     country: 'Великобритания',
     birthYear: 1866,
   ),
   const Author(
     id: 13,
-    lastName: 'Ле Гуин',
-    firstName: 'Урсула',
+    fullName: 'Ле Гуин Урсула',
     country: 'США',
     birthYear: 1929,
   ),
@@ -432,9 +411,7 @@ final List<Book> seedBooks = <Book>[
 final List<Reader> seedReaders = <Reader>[
   Reader(
     id: 1,
-    lastName: 'Иванова',
-    firstName: 'Анна',
-    middleName: 'Сергеевна',
+    fullName: 'Иванова Анна Сергеевна',
     email: 'anna.ivanova@example.com',
     phone: '+7 900 111-11-11',
     card: LibraryCard(
@@ -445,9 +422,7 @@ final List<Reader> seedReaders = <Reader>[
   ),
   Reader(
     id: 2,
-    lastName: 'Петров',
-    firstName: 'Илья',
-    middleName: 'Олегович',
+    fullName: 'Петров Илья Олегович',
     email: 'ilya.petrov@example.com',
     phone: '+7 900 222-22-22',
     card: LibraryCard(
@@ -458,8 +433,7 @@ final List<Reader> seedReaders = <Reader>[
   ),
   Reader(
     id: 3,
-    lastName: 'Сидорова',
-    firstName: 'Мария',
+    fullName: 'Сидорова Мария',
     email: 'maria.sidorova@example.com',
     phone: '+7 900 333-33-33',
     card: LibraryCard(
@@ -470,9 +444,7 @@ final List<Reader> seedReaders = <Reader>[
   ),
   Reader(
     id: 4,
-    lastName: 'Кузнецов',
-    firstName: 'Олег',
-    middleName: 'Игоревич',
+    fullName: 'Кузнецов Олег Игоревич',
     email: 'oleg.kuznetsov@example.com',
     phone: '+7 900 444-44-44',
     card: LibraryCard(
@@ -483,8 +455,7 @@ final List<Reader> seedReaders = <Reader>[
   ),
   Reader(
     id: 5,
-    lastName: 'Смирнова',
-    firstName: 'Елена',
+    fullName: 'Смирнова Елена',
     email: 'elena.smirnova@example.com',
     phone: '+7 900 555-55-55',
     card: LibraryCard(
@@ -495,9 +466,7 @@ final List<Reader> seedReaders = <Reader>[
   ),
   Reader(
     id: 6,
-    lastName: 'Васильев',
-    firstName: 'Павел',
-    middleName: 'Андреевич',
+    fullName: 'Васильев Павел Андреевич',
     email: 'pavel.vasiliev@example.com',
     phone: '+7 900 666-66-66',
     card: LibraryCard(
@@ -508,8 +477,7 @@ final List<Reader> seedReaders = <Reader>[
   ),
   Reader(
     id: 7,
-    lastName: 'Орлова',
-    firstName: 'Дарья',
+    fullName: 'Орлова Дарья',
     email: 'darya.orlova@example.com',
     phone: '+7 900 777-77-77',
     deletedAt: DateTime.utc(2024, 12, 1),
@@ -521,8 +489,7 @@ final List<Reader> seedReaders = <Reader>[
   ),
   Reader(
     id: 8,
-    lastName: 'Новиков',
-    firstName: 'Артём',
+    fullName: 'Новиков Артём',
     email: 'artem.novikov@example.com',
     phone: '+7 900 888-88-88',
     card: LibraryCard(
@@ -536,7 +503,7 @@ final List<Reader> seedReaders = <Reader>[
 String authorName(int id) {
   for (final author in seedAuthors) {
     if (author.id == id) {
-      return '${author.lastName} ${author.firstName}';
+      return author.fullName;
     }
   }
   return 'Автор #$id';
